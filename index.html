@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>旺角步行热暴露</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <div>
+      <h1>旺角步行热暴露</h1>
+      <p><time datetime="2025-07-17">2025 年 7 月 17 日</time><span class="date-divider"></span>日出至日落 · 香港时间</p>
+    </div>
+    <button id="presentationToggle" type="button" aria-pressed="false" disabled>展示模式</button><nav class="stations" aria-label="车站"><a data-station="MOK" href="?station=MOK">旺角</a><a data-station="ADM" href="?station=ADM">金钟</a><a data-station="HKU" href="?station=HKU">港大</a></nav><details class="info"><summary>模型说明 <span>ⓘ</span></summary><div class="info-panel"><h2>关于这张地图</h2><p>地图颜色是模型估计的太阳短波辐射强度，不是实测街道温度。天气来自 ERA5-Seamless 逐小时网格；模型假定有盖路段的辐射透过率为 20%，无遮盖为 100%。有盖并非零暴露；非路网区域未评估。</p><p>每日 10,000 人于 09:00–19:00 出发，为未校准的高人流假设情景，非实测客流。行人、出行需求和拥挤过程均为模拟。两情景比较同一批人的出行，路径先计算后回放，站内行程未计入。建筑轮廓来自 OSM；高度含楼层估算与缺省值，建筑并未用于计算真实日影。路网与行人显示在示意地面，不代表实际高程。</p><p>按住地图拖动可旋转，滚轮可缩放。两幅视角同步。</p><a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noopener">天气数据 ↗</a><a href="https://portal.csdi.gov.hk/geoportal/?datasetId=landsd_rcd_1637222018065_52265&amp;lang=en" target="_blank" rel="noopener">行人路网 ↗</a><a href="https://download.geofabrik.de/asia/china/hong-kong.html" target="_blank" rel="noopener">建筑数据 ↗</a></div></details>
+  </header>
+  <main class="workbench">
+    <section class="map-workspace" aria-label="路线地图对照">
+      <div class="map-toolbar">
+        <div class="map-tools" aria-label="地图控制">
+          <button id="viewAngle" class="active" aria-pressed="true">三维</button>
+          <button id="viewTop" aria-pressed="false">俯视</button>
+          <button id="viewReset">重置视角</button>
+        </div>
+        <button id="heatToggle" class="active" aria-pressed="true">辐射图层</button>
+      </div>
+      <div class="map-grid">
+        <section class="map-panel">
+          <header class="map-heading"><h2><i class="route-key base"></i>最短路径</h2><span><strong id="baseCount">—</strong> 人在路上</span></header>
+          <canvas id="baselineMap" aria-label="最短路径三维地图"></canvas>
+        </section>
+        <section class="map-panel">
+          <header class="map-heading"><h2><i class="route-key opt"></i>低辐射路径</h2><span><strong id="optCount">—</strong> 人在路上</span></header>
+          <canvas id="optimizedMap" aria-label="低辐射路径三维地图"></canvas>
+        </section>
+      </div>
+      <div class="map-footer">
+        <div class="heat-legend" aria-label="短波辐射强度图例">
+          <span>短波辐射 <small>W/m²</small></span>
+          <span><i class="cool"></i>有盖 <b id="coveredRadiation">—</b></span>
+          <span><i class="hot"></i>无遮盖 <b id="openRadiation">—</b></span>
+        </div>
+        <span>网格体感温度 <b id="apparentTemperature">—</b></span>
+      </div>
+      <section class="playback" aria-label="回放控制">
+        <div class="day-controls">
+          <strong>日照与行人回放</strong>
+          <span id="replaySource"></span>
+          <div class="day-jumps">
+            <button data-time="sunrise">日出</button>
+            <button data-time="sample">14:00</button>
+            <button data-time="sunset">日落</button>
+          </div>
+        </div>
+        <div class="playbar">
+          <button id="play" class="play-button" aria-label="开始播放">播放</button>
+          <time id="currentTime">14:00:00</time>
+          <input id="timeline" type="range" min="0" max="86400" value="50400" aria-label="仿真时间">
+          
+          <div class="speed" aria-label="播放速度">
+            <button class="speed-button" data-speed="0.1" aria-pressed="false">0.1×</button>
+            <button class="speed-button" data-speed="0.5" aria-pressed="false">0.5×</button>
+            <button class="speed-button active" data-speed="1" aria-pressed="true">1×</button>
+            <button class="speed-button" data-speed="2" aria-pressed="false">2×</button>
+          </div>
+          <button id="restart" class="restart">重播</button>
+        </div>
+        <div class="day-scale"><span id="sunrise">—</span><span>12:00</span><span id="sunset">—</span></div>
+      </section>
+    </section>
+    <aside class="inspector" id="comparison" aria-label="仿真结果">
+      <section class="individual">
+        <h2>个体路线对比</h2>
+        <div class="selection"><strong id="selectedTitle">行人路径</strong><button id="focusReset">返回示例</button></div>
+        <p id="selectedCaption" class="secondary"></p>
+        <table>
+          <caption>全程累计短波辐射 <small>kJ/m²</small></caption>
+          <tbody>
+            <tr><th scope="row"><i class="route-key base"></i>最短路径</th><td id="selectedBase">—</td></tr>
+            <tr><th scope="row"><i class="route-key opt"></i>低辐射路径</th><td id="selectedOpt">—</td></tr>
+            <tr class="delta"><th scope="row">变化</th><td id="selectedChange">—</td></tr>
+          </tbody>
+        </table>
+        <dl class="trip-details" id="selectionInfo"></dl>
+      </section>
+      <section id="presentationPanel" hidden>
+        <h2>路径改变最大的 10 条路线</h2>
+        <p class="secondary">按基准与优化两条路线的几何偏离排序，优先覆盖不同 OD；不足 10 条时以次优行人补足。点击行可跳到该行人的出发时刻。</p>
+        <ol id="routeRanking"></ol>
+      </section>
+      <section class="daily">
+        <h2>全天模拟结果</h2>
+        <p id="crowdLabel" class="secondary"></p>
+        <dl id="dailyMean"></dl>
+      </section>
+      <section class="notes">
+        <div class="people-legend"><span><i></i>模拟行人</span><span><i class="slow"></i>拥挤减速</span></div>
+        <p id="loadStatus" role="status">正在加载三维场景…</p>
+      </section>
+    </aside>
+  </main>
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
