@@ -3,6 +3,12 @@
 这是 `http://127.0.0.1:8769/?station=HKU` 那个站的源码，也是项目里唯一维护的三维网页版本。
 页面按 2025-07-17 全天回放 10,000 人假设客流，日照随时间变化，建筑投影用于示意。
 
+## 在线访问
+
+- 站点：https://fengjiawei126.github.io/mtr-heat-walk/?station=HKU （换 `?station=MOK` / `?station=ADM` 切站）
+- 仓库：https://github.com/fengjiawei126/mtr-heat-walk —— 本目录就是仓库根，推到 `main` 后 GitHub Pages 会自动重新发布（约 1 分钟）。
+- 托管为静态站点，无需服务器；`data/*.gz` 由浏览器端 `DecompressionStream` 解压，换托管平台时需确认 `.gz` 以二进制原样返回。
+
 ## 打开
 
 ```bash
