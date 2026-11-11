@@ -16,6 +16,114 @@ let views = [], heroView, syncing = false;
 const cameraPosition = new THREE.Vector3(650, 910, 920);
 const markers = { normal: new THREE.Color('#f2f8f3'), slow: new THREE.Color('#ffd278'), selected: new THREE.Color('#bcacff') };
 
+// ------------------------------------------------------------------ language
+const stationNames = { en: { MOK: 'Mong Kok', ADM: 'Admiralty', HKU: 'HKU' }, zh: { MOK: '旺角', ADM: '金钟', HKU: '港大' } };
+let lang = localStorage.getItem('mtr-lang') === 'zh' ? 'zh' : 'en';
+let statusKey = 'loading';
+const STRINGS = {
+  en: {
+    date: '17 July 2025', dateNote: 'Sunrise to sunset · Hong Kong time',
+    presentation: 'Presentation', presentationExit: 'Exit presentation', stationsAria: 'Stations',
+    infoSummary: 'About the model', infoTitle: 'About this map',
+    infoP1: 'Map colours are modelled shortwave solar radiation, not measured street temperature. Weather comes from the hourly ERA5-Seamless grid; the model assumes 20% transmission through covered links and 100% outdoors. Covered is not zero exposure; areas outside the mapped network are not evaluated.',
+    infoP2: 'Each day 10,000 pedestrians depart between 09:00 and 19:00 — an uncalibrated high-demand scenario, not observed traffic. Pedestrians, demand and congestion are simulated. Both scenarios compare the same trips; routes are computed first and then replayed, and walking inside stations is excluded. Building footprints come from OSM; heights mix estimates and defaults, and buildings are not used to compute real shadows. The network and pedestrians are shown on an illustrative ground plane, not real elevation.',
+    infoP3: 'Drag to rotate and scroll to zoom. Both views stay synchronised.',
+    linkWeather: 'Weather data ↗', linkNetwork: 'Pedestrian network ↗', linkBuildings: 'Building data ↗', langButton: '中文',
+    mapWorkspaceAria: 'Route map comparison', mapControlsAria: 'Map controls',
+    view3d: '3D', viewTop: 'Top view', viewReset: 'Reset view', radiation: 'Radiation layer',
+    mapShort: 'Shortest path', mapLow: 'Low-radiation path', walking: 'walking',
+    canvasShortAria: 'Shortest-path 3D map', canvasLowAria: 'Low-radiation 3D map',
+    heatLegendAria: 'Shortwave radiation legend', shortwave: 'Shortwave radiation', covered: 'Covered', open: 'Uncovered',
+    gridTemp: 'Grid apparent temperature', playbackAria: 'Replay controls',
+    dayControls: 'Daylight and pedestrian replay', sunrise: 'Sunrise', sunset: 'Sunset',
+    play: 'Play', pause: 'Pause', playAria: 'Play', pauseAria: 'Pause', replay: 'Replay',
+    timelineAria: 'Simulation time', speedAria: 'Playback speed', resultsAria: 'Simulation results',
+    individual: 'Individual route comparison', routeDefault: 'Pedestrian route',
+    backExample: 'Back to example', backFirst: 'Back to route 1',
+    cumulative: 'Cumulative shortwave radiation', shortRow: 'Shortest path', lowRow: 'Low-radiation path', changeRow: 'Change',
+    topTen: 'Ten routes with the largest route change',
+    topTenNote: 'Ranked by the geometric deviation between the shortest and low-radiation routes, prioritising different OD pairs and filling with next-best pedestrians when fewer than ten routes change. Only the current route is drawn; click a row to jump to that pedestrian\'s departure.',
+    daily: 'Full-day simulation results', crowdLabel: 'Hypothetical 10,000 pedestrians per day',
+    meanSolar: 'Mean shortwave radiation', meanTime: 'Mean walking time',
+    legendPed: 'Simulated pedestrian', legendSlow: 'Congestion slowdown',
+    loading: 'Building 3D scene…',
+    ready: 'All three stations use the same day, weather grid and 10,000-person daily scenario. Departures start at 09:00; shadows are illustrative.',
+    presentationStatus: 'Presentation: only the current route is shown (white = shortest path, violet = low-radiation path), only these 10 pedestrians are kept; 0.5× playback with auto-advance.',
+    error: '3D scene unavailable. Refresh the page or check browser graphics acceleration.',
+    replaySource: 'Full-day simulation · 5 s steps',
+    routeRow: 'Route {n}', pedRow: 'Pedestrian {id} · departs {time}', deviationRow: '{n} m deviation',
+    routeTitle: 'Route {n} · pedestrian {id}', pedTitle: 'Pedestrian {id}',
+    captionRoute: 'Two routes differ by {n} m on average · same station and destination',
+    captionFocus: 'Example pedestrian · both routes share the destination',
+    captionOther: 'Same station and destination; exits may differ',
+    routeLength: 'Route length', walkTime: 'Walking time', metres: 'm', seconds: 's',
+    titleSuffix: ' walking heat exposure',
+  },
+  zh: {
+    date: '2025 年 7 月 17 日', dateNote: '日出至日落 · 香港时间',
+    presentation: '展示模式', presentationExit: '退出展示模式', stationsAria: '车站',
+    infoSummary: '模型说明', infoTitle: '关于这张地图',
+    infoP1: '地图颜色是模型估计的太阳短波辐射强度，不是实测街道温度。天气来自 ERA5-Seamless 逐小时网格；模型假定有盖路段的辐射透过率为 20%，无遮盖为 100%。有盖并非零暴露；非路网区域未评估。',
+    infoP2: '每日 10,000 人于 09:00–19:00 出发，为未校准的高人流假设情景，非实测客流。行人、出行需求和拥挤过程均为模拟。两情景比较同一批人的出行，路径先计算后回放，站内行程未计入。建筑轮廓来自 OSM；高度含楼层估算与缺省值，建筑并未用于计算真实日影。路网与行人显示在示意地面，不代表实际高程。',
+    infoP3: '按住地图拖动可旋转，滚轮可缩放。两幅视角同步。',
+    linkWeather: '天气数据 ↗', linkNetwork: '行人路网 ↗', linkBuildings: '建筑数据 ↗', langButton: 'EN',
+    mapWorkspaceAria: '路线地图对照', mapControlsAria: '地图控制',
+    view3d: '三维', viewTop: '俯视', viewReset: '重置视角', radiation: '辐射图层',
+    mapShort: '最短路径', mapLow: '低辐射路径', walking: '人在路上',
+    canvasShortAria: '最短路径三维地图', canvasLowAria: '低辐射三维地图',
+    heatLegendAria: '短波辐射强度图例', shortwave: '短波辐射', covered: '有盖', open: '无遮盖',
+    gridTemp: '网格体感温度', playbackAria: '回放控制',
+    dayControls: '日照与行人回放', sunrise: '日出', sunset: '日落',
+    play: '播放', pause: '暂停', playAria: '开始播放', pauseAria: '暂停播放', replay: '重播',
+    timelineAria: '仿真时间', speedAria: '播放速度', resultsAria: '仿真结果',
+    individual: '个体路线对比', routeDefault: '行人路径',
+    backExample: '返回示例', backFirst: '回到第 1 位',
+    cumulative: '全程累计短波辐射', shortRow: '最短路径', lowRow: '低辐射路径', changeRow: '变化',
+    topTen: '路径改变最大的 10 条路线',
+    topTenNote: '按基准与优化两条路线的几何偏离排序，优先覆盖不同 OD；不足 10 条时以次优行人补足。地图一次只显示当前路线，点击行可跳到该行人的出发时刻。',
+    daily: '全天模拟结果', crowdLabel: '每日 10,000 人的假设客流',
+    meanSolar: '人均短波辐射', meanTime: '人均步行耗时',
+    legendPed: '模拟行人', legendSlow: '拥挤减速',
+    loading: '正在加载三维场景…',
+    ready: '三站采用同一天、同一气象网格与每日万人情景。09:00 开始出发，阴影为建筑模型示意。',
+    presentationStatus: '展示模式：每次只显示当前路线（白=最短路径，紫=低辐射路径），只保留这 10 位行人；0.5× 回放，自动连播。',
+    error: '三维场景加载失败，请刷新页面或检查浏览器的图形加速设置。',
+    replaySource: '全天仿真 · 5 秒步长',
+    routeRow: '路线 {n}', pedRow: '行人 {id} · {time} 出发', deviationRow: '偏离 {n} 米',
+    routeTitle: '路线 {n} · 行人 {id}', pedTitle: '行人 {id}',
+    captionRoute: '两条路线几何偏离 {n} 米 · 同一站点与目的地',
+    captionFocus: '示例行人 · 两条路线的目的地相同',
+    captionOther: '同一站点和目的地，出口可能不同',
+    routeLength: '路线长度', walkTime: '步行耗时', metres: '米', seconds: '秒',
+    titleSuffix: '步行热暴露',
+  },
+};
+function L(key, vars) {
+  let text = (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
+  if (vars) for (const [name, value] of Object.entries(vars)) text = text.split('{' + name + '}').join(String(value));
+  return text;
+}
+function setStatus(key) { statusKey = key; const el = $('#loadStatus'); if (el) el.textContent = L(key); }
+function updatePresentationButton() { const toggle = $('#presentationToggle'); if (toggle) toggle.textContent = presentation ? L('presentationExit') : L('presentation'); }
+function applyStaticLanguage() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = L(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', L(el.dataset.i18nAria)));
+  const toggle = $('#langToggle'); if (toggle) toggle.textContent = L('langButton');
+}
+function updateStationLabels() {
+  const name = stationNames[lang][station];
+  $('#pageTitle').textContent = name + L('titleSuffix');
+  document.title = name + L('titleSuffix');
+  document.querySelectorAll('[data-station]').forEach(link => { link.textContent = stationNames[lang][link.dataset.station]; link.setAttribute('aria-current', link.dataset.station === station ? 'page' : 'false'); });
+}
+function dailyMeanHTML() {
+  const ma = crowd.metrics_full_day_seed11.baseline, mb = crowd.metrics_full_day_seed11.optimised;
+  const change = (after, before) => { const percent = 100 * (after / before - 1); return `${percent < 0 ? '−' : '+'}${Math.abs(percent).toFixed(1)}%`; };
+  return `<div><dt>${L('meanSolar')}</dt><dd>${change(mb.mean_solar_kj_m2, ma.mean_solar_kj_m2)}</dd></div>`
+    + `<div><dt>${L('meanTime')}</dt><dd>${change(mb.mean_travel_time_s, ma.mean_travel_time_s)}</dd></div>`;
+}
+
 function buildWorld(data, heights){
   const group = new THREE.Group();
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(2600,2600),new THREE.MeshLambertMaterial({color:'#24272b'}));
@@ -142,9 +250,9 @@ function updateUI() {
   timeline.value = Math.floor(seconds);
   timeline.setAttribute('aria-valuetext', timeLabel(seconds));
   $('#currentTime').textContent = timeLabel(seconds, true);
-  $('#replaySource').textContent = '全天仿真 · 5 秒步长';
-  play.textContent = playing ? '暂停' : '播放';
-  play.setAttribute('aria-label', playing ? '暂停播放' : '开始播放');
+  $('#replaySource').textContent = L('replaySource');
+  play.textContent = playing ? L('pause') : L('play');
+  play.setAttribute('aria-label', playing ? L('pauseAria') : L('playAria'));
   views.forEach(updateAgents);
   $('#baseCount').textContent = views[0].dots.count;
   $('#optCount').textContent = views[1].dots.count;
@@ -172,23 +280,6 @@ function pathMesh(path,width,color,order,opacity=1){
   const coords=[];for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],dx=b[0]-a[0],dz=-(b[1]-a[1]),len=Math.hypot(dx,dz);if(!len)continue;const nx=-dz/len*width/2,nz=dx/len*width/2,az=-a[1],bz=-b[1];for(const p of [[a[0]+nx,az+nz],[a[0]-nx,az-nz],[b[0]+nx,bz+nz],[b[0]+nx,bz+nz],[a[0]-nx,az-nz],[b[0]-nx,bz-nz]])coords.push(p[0],5,p[1])}
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));const material=new THREE.MeshBasicMaterial({color,depthTest:false,side:THREE.DoubleSide});if(opacity<1){material.transparent=true;material.opacity=opacity}const mesh=new THREE.Mesh(geometry,material);mesh.renderOrder=order;return mesh;
 }
-// 展示模式：把路径改变最大的 10 条路线常显在两张地图上，选中一条高亮。
-function renderPresentationPaths(){
-  for(const view of views){
-    const prior=view.scene.getObjectByName('presentationPaths');
-    if(prior){view.scene.remove(prior);for(const mesh of prior.children){mesh.geometry.dispose();mesh.material.dispose()}}
-    if(!presentation||!presentationTop.length)continue;
-    const layer=new THREE.Group();layer.name='presentationPaths';
-    const color=view.key==='baseline'?'#fff8de':'#bda8ff';
-    // 先铺深色描边再铺彩色线，10 条路线互相叠加时仍然可读。
-    for(const item of presentationTop)layer.add(pathMesh(crowd.od_paths[view.key][item.route],12,'#0b1420',8,.45));
-    for(const item of presentationTop){
-      const active = item.id === selected;
-      layer.add(pathMesh(crowd.od_paths[view.key][item.route], active ? 9 : 7, color, active ? 10 : 9, active ? .98 : .8));
-    }
-    view.scene.add(layer);
-  }
-}
 function updateSelected(){
   const idx=crowd.agent_od_index[selected], a=crowd.agent_metrics.baseline, b=crowd.agent_metrics.optimised;
   const reduction=(1-b.solar_kj_m2[selected]/a.solar_kj_m2[selected])*100;
@@ -197,20 +288,20 @@ function updateSelected(){
   });
   const routeIndex=presentation?presentationTop.findIndex(entry=>entry.id===selected):-1;
   const presentationItem=routeIndex>=0?presentationTop[routeIndex]:null;
-  $('#selectedTitle').textContent=presentationItem?('路线 '+(routeIndex+1)+' · 行人 '+selected):('行人 '+selected);
+  $('#selectedTitle').textContent=presentationItem?L('routeTitle',{n:routeIndex+1,id:selected}):L('pedTitle',{id:selected});
   if(presentationItem){
-    $('#selectedCaption').textContent='两条路线几何偏离 '+presentationItem.deviation.toFixed(1)+' 米 · 同一站点与目的地';
+    $('#selectedCaption').textContent=L('captionRoute',{n:presentationItem.deviation.toFixed(1)});
   }else{
-    $('#selectedCaption').textContent=selected===crowd.focus_agent.agent_id?'示例行人 · 两条路线的目的地相同':'同一站点和目的地，出口可能不同';
+    $('#selectedCaption').textContent=selected===crowd.focus_agent.agent_id?L('captionFocus'):L('captionOther');
   }
+  $('#focusReset').textContent=presentation?L('backFirst'):L('backExample');
   $('#selectedBase').textContent=a.solar_kj_m2[selected].toFixed(1);$('#selectedOpt').textContent=b.solar_kj_m2[selected].toFixed(1);$('#selectedChange').textContent=(reduction>=0?'−':'+')+Math.abs(reduction).toFixed(1)+'%';
   $('#selectedChange').classList.toggle('increase', reduction < 0);
-  $('#selectionInfo').innerHTML = `<div><dt>路线长度</dt><dd>${Math.round(a.length_m[selected])} → ${Math.round(b.length_m[selected])} 米</dd></div>
-    <div><dt>步行耗时</dt><dd>${Math.round(a.travel_time_s[selected])} → ${Math.round(b.travel_time_s[selected])} 秒</dd></div>`;
+  $('#selectionInfo').innerHTML = `<div><dt>${L('routeLength')}</dt><dd>${Math.round(a.length_m[selected])} → ${Math.round(b.length_m[selected])} ${L('metres')}</dd></div>
+    <div><dt>${L('walkTime')}</dt><dd>${Math.round(a.travel_time_s[selected])} → ${Math.round(b.travel_time_s[selected])} ${L('seconds')}</dd></div>`;
   for(const v of views){const prior=v.scene.getObjectByName('focusPath');if(prior){v.scene.remove(prior);for(const m of prior.children){m.geometry.dispose();m.material.dispose()}}
     const path=crowd.od_paths[v.key][idx], route=new THREE.Group();route.name='focusPath';route.add(pathMesh(path,17,'#0b1420',11));route.add(pathMesh(path,8,v.key==='baseline'?'#fff8de':'#bda8ff',12));v.scene.add(route);
   }
-  renderPresentationPaths();
 }
 function bindSelection(view){let down;view.canvas.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY]});view.canvas.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>5)return;const r=view.canvas.getBoundingClientRect();const pointer=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);const ray=new THREE.Raycaster();ray.setFromCamera(pointer,view.camera);const hit=ray.intersectObject(view.dots);if(hit.length){selected=view.ids[hit[0].instanceId];updateSelected();updateUI()}})}
 
@@ -309,41 +400,46 @@ function focusPresentation(index) {
   updateSelected();
   updateUI();
 }
-function setupPresentation() {
-  presentationTop = buildPresentation();
-  presentationIds = new Set(presentationTop.map(item => item.id));
-  presentationSequence = [...presentationTop];  // 自动连播按右侧排名顺序
+function renderRanking() {
   const ranking = $('#routeRanking');
+  if (!ranking) return;
+  ranking.innerHTML = '';
   presentationTop.forEach(({ id, deviation }, index) => {
     const row = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.agent = id;
     const departure = timeLabel(crowd.frame_start + crowd.agent_departure_s[id], true);
-    button.innerHTML = `<span>路线 ${index + 1}<small>行人 ${id} · ${departure} 出发</small></span><strong>偏离 ${Math.round(deviation)} 米</strong>`;
+    button.innerHTML = `<span>${L('routeRow', { n: index + 1 })}<small>${L('pedRow', { id, time: departure })}</small></span><strong>${L('deviationRow', { n: Math.round(deviation) })}</strong>`;
     button.addEventListener('click', () => {
       focusPresentation(presentationSequence.findIndex(item => item.id === id));
     });
     row.append(button);
     ranking.append(row);
   });
+}
+function setupPresentation() {
+  presentationTop = buildPresentation();
+  presentationIds = new Set(presentationTop.map(item => item.id));
+  presentationSequence = [...presentationTop];  // 自动连播按右侧排名顺序
   const toggle = $('#presentationToggle');
   toggle.disabled = false;
+  renderRanking();
+  updatePresentationButton();
   toggle.addEventListener('click', () => {
     presentation = !presentation;
     toggle.setAttribute('aria-pressed', String(presentation));
-    toggle.textContent = presentation ? '退出展示模式' : '展示模式';
+    updatePresentationButton();
     $('#presentationPanel').hidden = !presentation;
     document.body.classList.toggle('presentation', presentation);
-    $('#focusReset').textContent = presentation ? '回到第 1 位' : '返回示例';
     if (presentation) {
       previousSpeed = speed;
-      setSpeed(.1);
-      $('#loadStatus').textContent = '展示模式：地图常显路径改变最大的 10 条路线（白=最短路径，紫=低辐射路径），只保留对应行人；0.1× 慢速回放，自动连播。';
+      setSpeed(.5);
+      setStatus('presentationStatus');
       focusPresentation(0);
     } else {
       setSpeed(previousSpeed || 1);
-      $('#loadStatus').textContent = '三站采用同一天、同一气象网格与每日万人情景。09:00 开始出发，阴影为建筑模型示意。';
+      setStatus('ready');
       updateSelected();
       updateUI();
     }
@@ -353,15 +449,29 @@ $('#heatToggle').addEventListener('click',()=>{const button=$('#heatToggle');con
 $('#focusReset').addEventListener('click',()=>{if(presentation){focusPresentation(0)}else{selected=crowd.focus_agent.agent_id;updateSelected();updateUI()}});
 $('#viewAngle').addEventListener('click',()=>setView(false));$('#viewTop').addEventListener('click',()=>setView(true));$('#viewReset').addEventListener('click',()=>setView(false));
 window.addEventListener('resize',()=>{for(const v of [...views,heroView])if(v)resizeView(v)});
-const stationNames = {MOK:'旺角', ADM:'金钟', HKU:'港大'};
 const requestedStation = new URLSearchParams(location.search).get('station');
-const station = Object.hasOwn(stationNames, requestedStation) ? requestedStation : 'MOK';
-document.querySelector('h1').textContent = stationNames[station] + '步行热暴露';
-document.title = stationNames[station] + '步行热暴露';
-document.querySelectorAll('[data-station]').forEach(link => link.setAttribute('aria-current', link.dataset.station === station ? 'page' : 'false'));
+const station = Object.hasOwn(stationNames.en, requestedStation) ? requestedStation : 'MOK';
+applyStaticLanguage();
+updateStationLabels();
+setStatus('loading');
+$('#langToggle').addEventListener('click', () => {
+  lang = lang === 'en' ? 'zh' : 'en';
+  localStorage.setItem('mtr-lang', lang);
+  applyStaticLanguage();
+  updateStationLabels();
+  updatePresentationButton();
+  if (crowd) {
+    renderRanking();
+    updateSelected();
+    updateUI();
+    $('#dailyMean').innerHTML = dailyMeanHTML();
+    $('#crowdLabel').textContent = L('crowdLabel');
+    setStatus(statusKey);
+  }
+});
 async function readReplay() {
   const response = await fetch('data/' + station + '/replay.json.gz');
-  if (!response.ok) throw Error('轨迹读取失败');
+  if (!response.ok) throw Error('replay read failed');
   return new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();
 }
 Promise.all([fetch('data/' + station + '/geometry.json').then(r=>r.json()),readReplay(),fetch('data/day-weather.json').then(r=>r.json())]).then(([d,c,w])=>{
@@ -386,17 +496,12 @@ Promise.all([fetch('data/' + station + '/geometry.json').then(r=>r.json()),readR
     updateUI();
   }));
   for(const v of views)resizeView(v);views.forEach(bindSelection);updateSelected();updateUI();
-  const ma=crowd.metrics_full_day_seed11.baseline,mb=crowd.metrics_full_day_seed11.optimised;
-  const change = (after, before) => {
-    const percent = 100 * (after / before - 1);
-    return `${percent < 0 ? '−' : '+'}${Math.abs(percent).toFixed(1)}%`;
-  };
-  $('#dailyMean').innerHTML = `<div><dt>人均短波辐射</dt><dd>${change(mb.mean_solar_kj_m2, ma.mean_solar_kj_m2)}</dd></div>
-    <div><dt>人均步行耗时</dt><dd>${change(mb.mean_travel_time_s, ma.mean_travel_time_s)}</dd></div>`;
-  $('#crowdLabel').textContent='每日 10,000 人的假设客流';$('#loadStatus').textContent='三站采用同一天、同一气象网格与每日万人情景。09:00 开始出发，阴影为建筑模型示意。';
+  $('#dailyMean').innerHTML = dailyMeanHTML();
+  $('#crowdLabel').textContent = L('crowdLabel');
   setupPresentation();
+  setStatus('ready');
   requestAnimationFrame(tick);
-}).catch(err=>{$('#loadStatus').textContent='三维场景加载失败，请刷新页面或检查浏览器的图形加速设置。';play.disabled=true;console.error('3D scene unavailable',err)});
+}).catch(err=>{setStatus('error');play.disabled=true;console.error('3D scene unavailable',err)});
 
 
 
