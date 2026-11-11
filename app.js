@@ -52,6 +52,7 @@ const STRINGS = {
     error: '3D scene unavailable. Refresh the page or check browser graphics acceleration.',
     replaySource: 'Full-day simulation · 5 s steps',
     routeRow: 'Route {n}', pedRow: 'Pedestrian {id} · departs {time}', deviationRow: '{n} m deviation',
+    exposureSaved: '{n} kJ/m²', exposureSavedTitle: 'Reduction in cumulative heat exposure',
     routeTitle: 'Route {n} · pedestrian {id}', pedTitle: 'Pedestrian {id}',
     captionRoute: 'Two routes differ by {n} m on average · same station and destination',
     captionFocus: 'Example pedestrian · both routes share the destination',
@@ -80,7 +81,7 @@ const STRINGS = {
     backExample: '返回示例', backFirst: '回到第 1 位',
     cumulative: '全程累计短波辐射', shortRow: '最短路径', lowRow: '低辐射路径', changeRow: '变化',
     topTen: '路径改变最大的 10 条路线',
-    topTenNote: '按基准与优化两条路线的几何偏离排序，优先覆盖不同 OD；不足 10 条时以次优行人补足。地图一次只显示当前路线，点击行可跳到该行人的出发时刻。',
+    topTenNote: '按基准与优化两条路线的几何偏离排序，优先覆盖不同 OD；不足 10 条时以次优行人补足。地图一次只显示当前路线，红色数字为该路线全程热暴露减少量；点击行可跳到该行人的出发时刻。',
     daily: '全天模拟结果', crowdLabel: '每日 10,000 人的假设客流',
     meanSolar: '人均短波辐射', meanTime: '人均步行耗时',
     legendPed: '模拟行人', legendSlow: '拥挤减速',
@@ -90,6 +91,7 @@ const STRINGS = {
     error: '三维场景加载失败，请刷新页面或检查浏览器的图形加速设置。',
     replaySource: '全天仿真 · 5 秒步长',
     routeRow: '路线 {n}', pedRow: '行人 {id} · {time} 出发', deviationRow: '偏离 {n} 米',
+    exposureSaved: '{n} kJ/m²', exposureSavedTitle: '全程热暴露减少量',
     routeTitle: '路线 {n} · 行人 {id}', pedTitle: '行人 {id}',
     captionRoute: '两条路线几何偏离 {n} 米 · 同一站点与目的地',
     captionFocus: '示例行人 · 两条路线的目的地相同',
@@ -410,7 +412,11 @@ function renderRanking() {
     button.type = 'button';
     button.dataset.agent = id;
     const departure = timeLabel(crowd.frame_start + crowd.agent_departure_s[id], true);
-    button.innerHTML = `<span>${L('routeRow', { n: index + 1 })}<small>${L('pedRow', { id, time: departure })}</small></span><strong>${L('deviationRow', { n: Math.round(deviation) })}</strong>`;
+    const baselineSolar = crowd.agent_metrics.baseline.solar_kj_m2[id];
+    const optimisedSolar = crowd.agent_metrics.optimised.solar_kj_m2[id];
+    const saved = baselineSolar - optimisedSolar;
+    const savedText = L('exposureSaved', { n: (saved < 0 ? '+' : '−') + Math.abs(saved).toFixed(1) });
+    button.innerHTML = `<span>${L('routeRow', { n: index + 1 })}<small>${L('pedRow', { id, time: departure })}</small></span><span class="route-metrics"><strong>${L('deviationRow', { n: Math.round(deviation) })}</strong><em title="${L('exposureSavedTitle')}">${savedText}</em></span>`;
     button.addEventListener('click', () => {
       focusPresentation(presentationSequence.findIndex(item => item.id === id));
     });
