@@ -180,3 +180,65 @@ dd { font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; 
 #routeRanking .route-metrics em { font-style:normal; font-weight:700; font-size:13px; color:#c62828; white-space:nowrap; letter-spacing:.01em; }
 .presentation .inspector { display:flex; flex-direction:column; }
 .presentation #presentationPanel { order:-1; border-top:0; border-bottom:1px solid var(--rule); }
+
+/* ---------------------------------------------------------------- mobile */
+/* Desktop layout above 820px is unchanged; everything below only adapts small screens. */
+@media (max-width: 900px) {
+  body { min-width: 0; font-size: 13px; }
+  .masthead { flex-wrap: wrap; gap: 8px 10px; padding: 12px 14px; min-height: 0; }
+  .masthead > div:first-child { flex: 1 1 100%; order: 1; }
+  .masthead h1 { font-size: 19px; }
+  .masthead p { margin-top: 5px; font-size: 11px; }
+  #langToggle { order: 2; margin-left: 0; margin-right: 0; min-height: 32px; padding: 4px 9px; }
+  #presentationToggle { order: 3; margin-left: 0; margin-right: 0; min-height: 32px; padding: 4px 10px; }
+  .info { order: 4; margin-left: auto; }
+  .info summary { min-height: 32px; padding: 4px 9px; font-size: 12px; }
+  .info-panel { width: calc(100vw - 20px); max-width: 420px; right: 0; }
+  .stations { order: 5; flex: 1 1 100%; margin: 0; gap: 6px; }
+  .stations a { padding: 6px 14px; font-size: 12px; }
+  .workbench { display: block; height: auto; min-height: 0; padding: 10px 12px calc(16px + env(safe-area-inset-bottom)); }
+  .map-workspace { display: block; }
+  .map-toolbar { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+  .map-tools { flex-wrap: wrap; }
+  .map-toolbar button, .playbar button { font-size: 11px; min-height: 30px; padding: 4px 8px; }
+  .map-grid { grid-template-columns: 1fr; }
+  .map-panel { grid-template-rows: auto 300px; }
+  .map-heading { padding: 8px 10px; }
+  .map-heading h2 { font-size: 12px; }
+  .map-heading span { font-size: 10px; }
+  .map-footer { flex-wrap: wrap; gap: 6px 12px; padding: 8px 10px; font-size: 10px; }
+  .playback { padding: 9px 10px; }
+  .day-controls { flex-wrap: wrap; gap: 6px 10px; margin-bottom: 7px; }
+  .day-controls strong { font-size: 12px; }
+  .day-jumps { margin-left: 0; }
+  .playbar { flex-wrap: wrap; gap: 8px; }
+  .playbar time { font-size: 11px; }
+  .playbar input { order: 10; flex: 1 1 100%; min-width: 0; height: 4px; }
+  .day-scale { margin: 6px 0 0; font-size: 9px; }
+  .inspector { margin-top: 12px; overflow: visible; }
+  .inspector section { padding: 14px; }
+  .inspector h2 { font-size: 15px; }
+  td { font-size: 17px; }
+  caption { font-size: 11px; }
+  dl div { font-size: 11px; }
+  .notes { font-size: 11px; }
+  #routeRanking { padding-left: 18px; }
+  #routeRanking button { font-size: 12px; }
+  #routeRanking .route-metrics em { font-size: 12px; }
+  #routeRanking small { font-size: 10px; }
+  .selection button { min-height: 26px; font-size: 10px; }
+  .day-jumps button { min-height: 26px; }
+  .stations a, #langToggle, #presentationToggle, .map-toolbar button, .playbar button { touch-action: manipulation; }
+}
+@media (max-width: 420px) {
+  .map-panel { grid-template-rows: auto 260px; }
+  .map-heading h2 { font-size: 11px; }
+  .map-heading .route-key { width: 10px; margin-right: 5px; }
+  .stations a { padding: 6px 11px; }
+  .playbar .speed { order: 8; }
+  .map-footer { font-size: 9px; }
+}
+@media (max-width: 900px) and (orientation: landscape) {
+  .map-panel { grid-template-rows: auto 230px; }
+  .map-grid { grid-template-columns: 1fr 1fr; }
+}
